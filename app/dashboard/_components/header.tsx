@@ -1,38 +1,33 @@
 "use client"
 
 import { Bell, History, Search, Sun } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
-export function Header() {
+export default function Header() {
   return (
     <header className="h-16 border-b bg-white px-6">
       <div className="flex h-full items-center justify-between">
         <div className="flex w-full max-w-md items-center">
           <Search className="mr-2 h-4 w-4 text-gray-400" />
-          <input 
-            type="search" 
-            placeholder="Search..." 
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <Input type="search" placeholder="Search..." className="w-full" />
         </div>
         <div className="flex items-center gap-2">
-          <button className="rounded-lg p-2 hover:bg-gray-100">
+          <Button variant="ghost" size="icon">
             <Sun className="h-5 w-5" />
-          </button>
-          <button className="rounded-lg p-2 hover:bg-gray-100">
+          </Button>
+          <Button variant="ghost" size="icon">
             <History className="h-5 w-5" />
-          </button>
-          <button className="rounded-lg p-2 hover:bg-gray-100">
+          </Button>
+          <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
-          </button>
+          </Button>
           <div className="h-8 w-8 overflow-hidden rounded-full">
-            <img 
-              src="/api/placeholder/32/32" 
-              alt="User avatar" 
-              className="h-full w-full object-cover" 
-            />
+            <img src="/placeholder.svg?height=32&width=32" alt="User avatar" className="h-full w-full object-cover" />
           </div>
         </div>
       </div>
     </header>
   )
 }
+
