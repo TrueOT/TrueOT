@@ -4,7 +4,7 @@ import { Bell, History, Search, Sun } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
-export default function Header() {
+export function Header() {
   return (
     <header className="h-16 border-b bg-white px-6">
       <div className="flex h-full items-center justify-between">
