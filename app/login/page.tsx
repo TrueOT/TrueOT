@@ -41,7 +41,7 @@ export default function LoginPage() {
             {/* Welcome Text */}
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-semibold text-purple-600">
-                Welcome to TrueOT Software Tool
+                Welcome to TrueOT
               </h1>
               <h2 className="text-xl text-purple-600 border-b border-purple-600 pb-2 inline-block">
                 Login Page
