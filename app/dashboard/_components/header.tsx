@@ -23,7 +23,7 @@ export function Header() {
             <Bell className="h-5 w-5" />
           </Button>
           <div className="h-8 w-8 overflow-hidden rounded-full">
-            <img src="/placeholder.svg?height=32&width=32" alt="User avatar" className="h-full w-full object-cover" />
+            <img src="/avatar.png" alt="User avatar" className="h-full w-full object-cover" />
           </div>
         </div>
       </div>

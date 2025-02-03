@@ -19,16 +19,15 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left side - Sidebar with image */}
-      <div className="w-64 bg-gray-100 flex items-center justify-center">
-        <img
-          src="/OT.png"
-          alt="Sidebar Image"
-          width={1080}
-          height={1080}
-          className="object-contain"
-        />
-      </div>
+  {/* Left side - Sidebar with image */}
+  <div className="w-1/3 bg-gray-100 flex items-center justify-center h-screen">
+    <img
+      src="/OT.jpg" // Replace with the path to your image in the `public` folder
+      alt="Sidebar Image"
+      className="w-full h-full object-cover"
+    />
+  </div>
+
 
       {/* Right side - Registration Form */}
       <div className="flex flex-1 flex-col bg-white">
