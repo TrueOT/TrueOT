@@ -5,16 +5,42 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signUp } from "@/lib/actions";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    // Add your registration logic here
-    setIsLoading(false);
+    setError("");
+
+    const formData = new FormData(e.currentTarget);
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const result = await signUp(formData);
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      router.push("/login");
+    } catch (err) {
+      setError("Failed to create account");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,9 +80,15 @@ export default function RegisterPage() {
             </div>
 
             <form onSubmit={onSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <Input
+                    name="email"
                     type="email"
                     placeholder="Enter your email"
                     className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
@@ -65,6 +97,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <Input
+                    name="password"
                     type="password"
                     placeholder="Create a password"
                     className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
@@ -73,6 +106,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <Input
+                    name="confirmPassword"
                     type="password"
                     placeholder="Confirm your password"
                     className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
