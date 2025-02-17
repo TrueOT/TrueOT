@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, User, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { signOut } from "next-auth/react";
 
 const navigation = [
   {
@@ -26,6 +27,12 @@ const navigation = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+  };
 
   return (
     <div className="w-64 bg-white border-r flex flex-col">
@@ -86,7 +93,10 @@ export function SidebarNav() {
 
       {/* Logout Button */}
       <div className="p-4 border-t">
-        <button className="flex items-center gap-2 text-gray-700 hover:text-red-600 transition-colors w-full">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-gray-700 hover:text-red-600 transition-colors w-full"
+        >
           <LogOut className="h-5 w-5" />
           Log out
         </button>

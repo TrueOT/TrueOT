@@ -5,16 +5,40 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    // Add your login logic here
-    setIsLoading(false)
+    setError("")
+
+    try {
+      const result = await signIn("credentials", {
+        email: e.currentTarget.email.value.toLowerCase(),
+        password: e.currentTarget.password.value,
+        redirect: false,
+        callbackUrl: "/dashboard"
+      })
+
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
+
+      if (result?.ok) {
+        router.push("/dashboard")
+        router.refresh()
+      }
+    } catch (err) {
+      setError("Failed to sign in")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -48,10 +72,17 @@ export default function LoginPage() {
               <h2 className="text-xl text-purple-600 border-b border-purple-600 pb-2 inline-block">Sign In</h2>
             </div>
 
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={onSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div>
                   <Input
+                    name="email"
                     type="email"
                     placeholder="Enter your email"
                     className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
@@ -60,6 +91,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <Input
+                    name="password"
                     type="password"
                     placeholder="Enter your password"
                     className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
@@ -68,7 +100,11 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-purple-600 hover:bg-purple-700" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
 
