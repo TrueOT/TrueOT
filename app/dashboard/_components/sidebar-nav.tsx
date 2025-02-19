@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, User, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const navigation = [
   {
@@ -28,6 +28,7 @@ const navigation = [
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -53,16 +54,15 @@ export function SidebarNav() {
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
           <Image
-            src="/avatar.png"
-            alt="User"
+            src={session?.user?.image || "/avatar.png"}
+            alt={session?.user?.name || "User"}
             width={40}
             height={40}
             className="rounded-full"
           />
           <div className="flex flex-col">
-            <span className="font-semibold">Ahmed</span>
-            <span className="text-xs text-gray-500">Security analyst</span>
-            <span className="text-xs text-gray-500">vulnerability manager</span>
+            <span className="font-semibold">{session?.user?.name}</span>
+            <span className="text-xs text-gray-500">{session?.user?.role}</span>
           </div>
           <button className="ml-auto">...</button>
         </div>

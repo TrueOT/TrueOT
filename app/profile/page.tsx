@@ -32,7 +32,7 @@ const navigation = [
 
 export default function ProfilePage() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [assetFile, setAssetFile] = useState<File | null>(null);
   const [vulnFile, setVulnFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -99,6 +99,14 @@ export default function ProfilePage() {
     }
   };
 
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  if (!session?.user) {
+    return <div>Not authenticated</div>;
+  }
+
   return (
     <div className="flex min-h-screen">
       <SidebarNav />
@@ -108,23 +116,26 @@ export default function ProfilePage() {
         <Header />
         <main className="bg-gray-50 p-8">
           <div className="p-8">
-            <h1 className="text-2xl font-semibold mb-6">Welcome, Ahmed</h1>
+            <h1 className="text-2xl font-semibold mb-6">
+              Welcome, {session.user.name}
+            </h1>
 
             {/* Profile Card */}
             <div className="bg-white rounded-lg p-6 mb-8 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 rounded-full overflow-hidden">
                   <Image
-                    src="/avatar.png"
-                    alt="Ahmed"
+                    src={session.user.image || "/avatar.png"}
+                    alt={session.user.name || "User"}
                     width={64}
                     height={64}
                     className="h-full w-full object-cover"
                   />
                 </div>
                 <div>
-                  <h2 className="text-xl font-medium">Ahmed</h2>
-                  <p className="text-gray-600">Ahmed@iau.edu.sa</p>
+                  <h2 className="text-xl font-medium">{session.user.name}</h2>
+                  <p className="text-gray-600">{session.user.email}</p>
+                  <p className="text-gray-600 text-sm">{session.user.role}</p>
                 </div>
               </div>
               <Button variant="outline" className="text-purple-600 border-purple-600">
