@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  name: z.string().min(2).max(50),
 });
 
 export async function signUp(formData: FormData) {
@@ -15,7 +16,9 @@ export async function signUp(formData: FormData) {
     actionFn: async () => {
       const email = formData.get("email");
       const password = formData.get("password");
-      const validatedData = schema.parse({ email, password });
+      const name = formData.get("name");
+      
+      const validatedData = schema.parse({ email, password, name });
       
       // Check if user already exists
       const existingUser = await db.user.findUnique({
@@ -33,6 +36,7 @@ export async function signUp(formData: FormData) {
         data: {
           email: validatedData.email.toLowerCase(),
           password: hashedPassword,
+          name: validatedData.name,
         },
       });
     },
