@@ -99,6 +99,40 @@ export default function ProfilePage() {
     }
   };
 
+  const handleVulnUpload = async () => {
+    if (!vulnFile || !session?.user?.id) {
+      setUploadError("No vulnerability report file selected or user not logged in");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    const formData = new FormData();
+    formData.append('file', vulnFile);
+    formData.append('userId', session.user.id);
+
+    try {
+      const response = await fetch('/api/upload/vuln', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      setVulnFile(null);
+      alert('Vulnerability report uploaded successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload vulnerability report');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (status === "loading") {
     return <div>Loading...</div>;
   }
@@ -202,12 +236,27 @@ export default function ProfilePage() {
                     ref={vulnInputRef}
                     type="file"
                     className="hidden"
+                    accept=".xlsx"
                     onChange={(e) => e.target.files && setVulnFile(e.target.files[0])}
                   />
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
-                  Admins are required to upload the latest Vulnerability Report for vulnerability assessment.
+                  Upload your vulnerability report in .xlsx format containing CVE details.
                 </p>
+                {uploadError && (
+                  <div className="mt-2 text-red-600 text-sm">
+                    {uploadError}
+                  </div>
+                )}
+                {vulnFile && (
+                  <Button
+                    onClick={handleVulnUpload}
+                    disabled={isUploading}
+                    className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {isUploading ? "Uploading..." : "Upload Vulnerability Report"}
+                  </Button>
+                )}
               </div>
             </div>
 

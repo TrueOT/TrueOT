@@ -21,6 +21,7 @@ model User {
   assets        Asset[]
   Authenticator Authenticator[]
   sessions      Session[]
+  vulnReports   VulnReport[]
 }
 
 model Account {
@@ -93,4 +94,22 @@ model Asset {
   updatedAt       DateTime @updatedAt
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VulnReport {
+  id            String   @id @default(cuid())
+  cveId         String
+  cweId         String?
+  cveName       String
+  cvssVersion   String
+  cvssScore     Float
+  cvssSeverity  String
+  description   String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cveId, userId])
+  @@index([userId])
 }
