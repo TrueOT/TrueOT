@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, History, Search, Sun } from "lucide-react"
+import { Bell, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -13,12 +13,6 @@ export function Header() {
           <Input type="search" placeholder="Search..." className="w-full" />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Sun className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <History className="h-5 w-5" />
-          </Button>
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
