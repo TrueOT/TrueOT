@@ -45,15 +45,14 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen">
-  {/* Left side - Sidebar with image */}
-  <div className="w-1/3 bg-gray-100 flex items-center justify-center h-screen">
-    <img
-      src="/OT.jpg" // Replace with the path to your image in the `public` folder
-      alt="Sidebar Image"
-      className="w-full h-full object-cover"
-    />
-  </div>
-
+      {/* Left side - Sidebar with image */}
+      <div className="w-1/3 bg-gray-100 flex items-center justify-center h-screen">
+        <img
+          src="/OT.jpg" // Replace with the path to your image in the `public` folder
+          alt="Sidebar Image"
+          className="w-full h-full object-cover"
+        />
+      </div>
 
       {/* Right side - Registration Form */}
       <div className="flex flex-1 flex-col bg-white">
@@ -68,84 +67,79 @@ export default function RegisterPage() {
 
         {/* Registration Form */}
         <div className="flex flex-1 items-center justify-center px-8">
-          <div className="w-full max-w-md space-y-6">
+          <div className="w-full max-w-md space-y-8">
             {/* Welcome Text */}
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-bold">Create an Account</h1>
-              <p className="text-gray-500">Enter your details to register</p>
+              <h1 className="text-3xl font-semibold text-purple-600">Welcome to TrueOT</h1>
+              <h2 className="text-xl text-purple-600 border-b border-purple-600 pb-2 inline-block">Create an Account</h2>
             </div>
 
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Full Name
-                </label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="Enter your name"
-                  required
-                />
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                {error}
               </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
+            )}
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Create a password"
-                  required
-                />
-              </div>
+            <form onSubmit={onSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium">
-                  Confirm Password
-                </label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  required
-                />
-              </div>
+                <div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
+                    required
+                  />
+                </div>
 
-              {error && (
-                <div className="text-red-500 text-sm">{error}</div>
-              )}
+                <div>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    className="border-b border-t-0 border-x-0 rounded-none focus-visible:ring-0 px-0"
+                    required
+                  />
+                </div>
+              </div>
 
               <Button
                 type="submit"
-                className="w-full bg-[#9333EA] hover:bg-[#8829e0]"
+                className="w-full bg-purple-600 hover:bg-purple-700"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
 
-              <p className="text-center text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link href="/login" className="text-[#9333EA] hover:underline">
-                  Sign in
+              <div className="text-center">
+                <Link href="/login" className="text-purple-600 hover:underline text-sm">
+                  Already have an account? Sign in
                 </Link>
-              </p>
+              </div>
             </form>
           </div>
         </div>
