@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SidebarNav } from "@/app/dashboard/_components/sidebar-nav"
 import { Header } from "@/app/dashboard/_components/header"
-import { useSession } from 'next-auth/react';
+import { useUserSession } from '@/lib/hooks/useUserSession';
 
 const navigation = [
   {
@@ -32,7 +32,7 @@ const navigation = [
 
 export default function ProfilePage() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { session, status, isLoading, isAuthenticated } = useUserSession();
   const [assetFile, setAssetFile] = useState<File | null>(null);
   const [vulnFile, setVulnFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -133,11 +133,11 @@ export default function ProfilePage() {
     }
   };
 
-  if (status === "loading") {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (!session?.user) {
+  if (!isAuthenticated || !session?.user) {
     return <div>Not authenticated</div>;
   }
 

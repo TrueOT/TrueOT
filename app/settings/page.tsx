@@ -5,37 +5,63 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { SidebarNav } from "@/app/dashboard/_components/sidebar-nav";
 import { Header } from "@/app/dashboard/_components/header";
-import { useSession } from 'next-auth/react';
+import { useUserSession } from '@/lib/hooks/useUserSession';
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { session, status, isLoading, isAuthenticated, updateUserProfile, deleteUserAccount } = useUserSession();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  if (status === "loading") {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (!session?.user) {
+  if (!isAuthenticated || !session?.user) {
     return <div>Not authenticated</div>;
   }
 
   const handleEditProfile = () => {
     setIsEditing(true);
     setName(session.user.name || '');
+    setError(null);
   };
 
   const handleSaveProfile = async () => {
-    // Implement save profile functionality here
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+    if (!name.trim() || name.length < 2) {
+      setError("Name must be at least 2 characters long");
+      return;
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    const result = await updateUserProfile({ name });
+    
+    if (result.success) {
+      setIsEditing(false);
+    } else {
+      setError(result.error || 'Failed to update profile');
+    }
+    
+    setIsUpdating(false);
   };
 
   const handleDeleteAccount = async () => {
-    // Implement delete account functionality here
-    alert('Account deleted successfully!');
-    // Redirect to login page or home page
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    const result = await deleteUserAccount();
+    
+    if (!result.success) {
+      setDeleteError(result.error || 'Failed to delete account');
+      setIsDeleting(false);
+    }
+    // No need to handle success case as the user will be redirected to login page
   };
 
   return (
@@ -52,6 +78,12 @@ export default function SettingsPage() {
             {/* Profile Settings Card */}
             <div className="bg-white rounded-lg p-6 mb-8">
               <h2 className="text-xl font-medium mb-4">Profile Settings</h2>
+              
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                  {error}
+                </div>
+              )}
               
               {isEditing ? (
                 <div className="space-y-4">
@@ -71,12 +103,17 @@ export default function SettingsPage() {
                     <Button 
                       onClick={handleSaveProfile}
                       className="bg-purple-600 hover:bg-purple-700 text-white"
+                      disabled={isUpdating}
                     >
-                      Save Changes
+                      {isUpdating ? "Saving..." : "Save Changes"}
                     </Button>
                     <Button 
                       variant="outline" 
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setError(null);
+                      }}
+                      disabled={isUpdating}
                     >
                       Cancel
                     </Button>
@@ -115,6 +152,12 @@ export default function SettingsPage() {
             <div className="bg-white rounded-lg p-6 mb-8">
               <h2 className="text-xl font-medium mb-4">Account Settings</h2>
               
+              {deleteError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+                  {deleteError}
+                </div>
+              )}
+              
               {showDeleteConfirm ? (
                 <div className="space-y-4">
                   <p className="text-red-600">Are you sure you want to delete your account? This action cannot be undone.</p>
@@ -123,12 +166,14 @@ export default function SettingsPage() {
                       variant="destructive" 
                       className="bg-red-600 hover:bg-red-700"
                       onClick={handleDeleteAccount}
+                      disabled={isDeleting}
                     >
-                      Yes, Delete My Account
+                      {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
                     >
                       Cancel
                     </Button>

@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, User, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useUserSession } from "@/lib/hooks/useUserSession";
 
 const navigation = [
   {
@@ -28,7 +29,7 @@ const navigation = [
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { session } = useUserSession();
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
