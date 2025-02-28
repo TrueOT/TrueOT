@@ -172,9 +172,6 @@ export default function ProfilePage() {
                   <p className="text-gray-600 text-sm">{session.user.role}</p>
                 </div>
               </div>
-              <Button variant="outline" className="text-purple-600 border-purple-600">
-                Edit
-              </Button>
             </div>
 
             {/* Upload Section */}
@@ -276,13 +273,6 @@ export default function ProfilePage() {
               <p className="text-center text-sm text-gray-500 mt-2">
                 Please ensure you upload both files Asset Inventory and Vulnerability Report
               </p>
-            </div>
-
-            {/* Delete Account */}
-            <div className="mt-8 flex justify-end">
-              <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-                Delete My Account
-              </Button>
             </div>
           </div>
         </main>
