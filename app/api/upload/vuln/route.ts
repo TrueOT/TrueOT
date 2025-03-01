@@ -28,6 +28,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No data found in file' }, { status: 400 });
     }
 
+    // Preprocess the data to clean up column names
+    const cleanedData = data.map(row => {
+      const cleanedRow: any = {};
+      Object.entries(row as object).forEach(([key, value]) => {
+        // Trim whitespace and tabs from column names
+        const cleanKey = key.trim();
+        cleanedRow[cleanKey] = value;
+      });
+      return cleanedRow;
+    });
+
+    // Debug: Log the column names found in the first row
+    if (cleanedData.length > 0) {
+      const columns = Object.keys(cleanedData[0]);
+      console.log('Columns found in uploaded file (after cleaning):', columns);
+      
+      // Debug: Log column names with their character codes to identify special characters
+      console.log('Column names with character codes:');
+      columns.forEach(col => {
+        const charCodes = Array.from(col).map(c => c.charCodeAt(0));
+        console.log(`"${col}": ${JSON.stringify(charCodes)}`);
+      });
+    }
+
     // Map common variations of field names - matching the asset implementation style
     const fieldMappings = {
       cveId: ['CVE ID', 'CVE-ID', 'CVEID', 'cve id', 'cve-id', 'cveid', 'CVE', 'cve'],
@@ -35,28 +59,39 @@ export async function POST(req: NextRequest) {
       cveName: ['CVE Name', 'CVE_NAME', 'CVENAME', 'Vulnerability Name', 'Title', 'Name', 'TITLE'],
       cvssVersion: ['CVSS Version', 'CVSS_VERSION', 'Version', 'CVSS', 'cvss version'],
       cvssScore: ['CVSS Score', 'CVSS_SCORE', 'Score', 'SCORE', 'cvss score'],
-      cvssSeverity: ['CVSS Severity', 'CVSS_SEVERITY', 'Severity', 'SEVERITY', 'cvss severity'],
-      description: ['CVE Description', 'Description', 'DESC', 'Details', 'DESCRIPTION']
+      originalSeverity: ['CVSS Severity', 'Original Severity', 'CVSS_SEVERITY', 'Severity', 'SEVERITY', 'cvss severity', 'original severity'],
+      newSeverity: ['New Severity', 'NEW_SEVERITY', 'Updated Severity', 'new severity'],
+      description: ['CVE Description', 'Description', 'DESC', 'Details', 'DESCRIPTION'],
+      ipAddress: ['IP Address', 'IP', 'IP_ADDRESS', 'Host IP', 'ip address', 'host ip', 'Ip address', 'Ip Address', 'IP Address\t', 'ipAddress'],
+      device: ['Device', 'DEVICE', 'Device Name', 'Host Name', 'device name', 'host name'],
+      status: ['Status', 'STATUS', 'State', 'STATE', 'status']
     };
 
     // Function to find the actual column name in the data - exact match from asset implementation
     const findFieldName = (row: any, fieldVariations: string[]) => {
       const rowKeys = Object.keys(row);
-      return rowKeys.find(key => fieldVariations.includes(key));
+      // First try exact match
+      const exactMatch = rowKeys.find(key => fieldVariations.includes(key));
+      if (exactMatch) return exactMatch;
+      
+      // If no exact match, try trimming whitespace and tabs
+      return rowKeys.find(key => {
+        const trimmedKey = key.trim();
+        return fieldVariations.includes(trimmedKey);
+      });
     };
 
     // Process each vulnerability record
-    for (const row of data as any[]) {
+    for (const row of cleanedData as any[]) {
       const vulnData: any = {};
+      const missingRequiredFields: string[] = [];
       
       // Map each field using the variations
       for (const [field, variations] of Object.entries(fieldMappings)) {
         const foundField = findFieldName(row, variations);
-        if (!foundField && field !== 'cweId') { // cweId is optional
-          throw new Error(
-            `Missing required field: ${field}. \nAccepted column names are: ${variations.join(', ')}\n` +
-            `Found columns: ${Object.keys(row).join(', ')}`
-          );
+        // Only cweId, ipAddress, device, newSeverity, and status are optional
+        if (!foundField && !['cweId', 'ipAddress', 'device', 'newSeverity', 'status'].includes(field)) {
+          missingRequiredFields.push(`${field} (accepted names: ${variations.join(', ')})`);
         }
         if (foundField) {
           // Handle specific field type conversions
@@ -70,13 +105,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // If there are missing required fields, throw an error
+      if (missingRequiredFields.length > 0) {
+        throw new Error(
+          `Missing required fields: ${missingRequiredFields.join(', ')}\n` +
+          `Found columns: ${Object.keys(row).join(', ')}`
+        );
+      }
+
+      // Set default values for optional fields if not provided
+      if (!vulnData.newSeverity && vulnData.originalSeverity) {
+        vulnData.newSeverity = vulnData.originalSeverity;
+      }
+      
+      if (!vulnData.status) {
+        vulnData.status = 'Open';
+      }
+
       // Check if this CVE already exists for this user
-      const existingVuln = await db.vulnReport.findUnique({
+      const existingVuln = await db.vulnReport.findFirst({
         where: {
-          cveId_userId: {
-            cveId: vulnData.cveId,
-            userId: session.user.id
-          }
+          cveId: vulnData.cveId,
+          userId: session.user.id
         }
       });
 
@@ -84,10 +134,7 @@ export async function POST(req: NextRequest) {
         // Update the existing record
         await db.vulnReport.update({
           where: {
-            cveId_userId: {
-              cveId: vulnData.cveId,
-              userId: session.user.id
-            }
+            id: existingVuln.id
           },
           data: {
             ...vulnData
