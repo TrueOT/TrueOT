@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SidebarNav } from "@/app/dashboard/_components/sidebar-nav"
 import { Header } from "@/app/dashboard/_components/header"
-import { useSession } from 'next-auth/react';
+import { useUserSession } from '@/lib/hooks/useUserSession';
 
 const navigation = [
   {
@@ -32,7 +32,7 @@ const navigation = [
 
 export default function ProfilePage() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { session, status, isLoading, isAuthenticated } = useUserSession();
   const [assetFile, setAssetFile] = useState<File | null>(null);
   const [vulnFile, setVulnFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -133,11 +133,11 @@ export default function ProfilePage() {
     }
   };
 
-  if (status === "loading") {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (!session?.user) {
+  if (!isAuthenticated || !session?.user) {
     return <div>Not authenticated</div>;
   }
 
@@ -172,9 +172,6 @@ export default function ProfilePage() {
                   <p className="text-gray-600 text-sm">{session.user.role}</p>
                 </div>
               </div>
-              <Button variant="outline" className="text-purple-600 border-purple-600">
-                Edit
-              </Button>
             </div>
 
             {/* Upload Section */}
@@ -276,13 +273,6 @@ export default function ProfilePage() {
               <p className="text-center text-sm text-gray-500 mt-2">
                 Please ensure you upload both files Asset Inventory and Vulnerability Report
               </p>
-            </div>
-
-            {/* Delete Account */}
-            <div className="mt-8 flex justify-end">
-              <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-                Delete My Account
-              </Button>
             </div>
           </div>
         </main>
