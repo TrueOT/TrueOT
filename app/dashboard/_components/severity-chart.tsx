@@ -43,7 +43,7 @@ export function SeverityChart() {
             transform: "translate(-50%, -50%)"
           }}
         >
-          <div className="text-3xl font-semibold">77%</div>
+          {/* <div className="text-3xl font-semibold">77%</div> */}
         </div>
       </div>
       {/* Legend */}

@@ -20,7 +20,8 @@ interface MetricCardProps {
         <MetricCard title="Total Devices" value={781} subtitle="Devices" />
         <MetricCard title="Critical Vulnerabilities" value={102} subtitle="Vulnerabilities" />
         <MetricCard title="Open Vulnerabilities" value={213} subtitle="Vulnerabilities" />
-        <MetricCard title="Unpatched Devices" value={27} subtitle="Devices" />
+        {/* <MetricCard title="Unpatched Devices" value={27} subtitle="Devices" /> */}
+        <MetricCard title="Mitigated Vulnerabilities" value={27} subtitle="Devices" />
       </div>
     );
   }
