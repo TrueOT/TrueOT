@@ -133,6 +133,16 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.href = '/Asset_Classification.xlsx';
+    link.download = 'Asset_Classification.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -260,7 +270,11 @@ export default function ProfilePage() {
             {/* Template Download */}
             <div className="mt-6">
               <p className="text-gray-600 mb-2">If you do not have a file you can use the sample below:</p>
-              <Button variant="outline" className="text-green-600 border-green-600">
+              <Button 
+                variant="outline" 
+                className="text-green-600 border-green-600"
+                onClick={handleDownloadTemplate}
+              >
                 Download Sample Template
               </Button>
             </div>
