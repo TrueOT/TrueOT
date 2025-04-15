@@ -37,6 +37,8 @@ export default function ProfilePage() {
   const [vulnFile, setVulnFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   
   const assetInputRef = useRef<HTMLInputElement>(null);
   const vulnInputRef = useRef<HTMLInputElement>(null);
@@ -130,6 +132,42 @@ export default function ProfilePage() {
       setUploadError(error instanceof Error ? error.message : 'Failed to upload vulnerability report');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleBothFilesAnalysis = async () => {
+    if (!assetFile || !vulnFile || !session?.user?.id) {
+      setAnalysisError("Both asset inventory and vulnerability report files are required");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    const formData = new FormData();
+    formData.append('assetfile', assetFile);
+    formData.append('scan_report', vulnFile);
+    formData.append('userId', session.user.id);
+
+    try {
+      const response = await fetch('/api/upload/analysis', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Analysis failed');
+      }
+
+      setAssetFile(null);
+      setVulnFile(null);
+      alert(`Vulnerability analysis completed successfully! Processed ${data.data?.length || 0} results.`);
+    } catch (error) {
+      console.error('Analysis error:', error);
+      setAnalysisError(error instanceof Error ? error.message : 'Failed to process vulnerability analysis');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -243,12 +281,12 @@ export default function ProfilePage() {
                     ref={vulnInputRef}
                     type="file"
                     className="hidden"
-                    accept=".xlsx"
+                    accept=".pdf,.xlsx"
                     onChange={(e) => e.target.files && setVulnFile(e.target.files[0])}
                   />
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
-                  Upload your vulnerability report in .xlsx format containing CVE details.
+                  Upload the latest vulnerability report scan. Accepted formats are .pdf and .xlsx.
                 </p>
                 {uploadError && (
                   <div className="mt-2 text-red-600 text-sm">
@@ -267,26 +305,51 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Template Download */}
-            <div className="mt-6">
-              <p className="text-gray-600 mb-2">If you do not have a file you can use the sample below:</p>
-              <Button 
-                variant="outline" 
-                className="text-green-600 border-green-600"
-                onClick={handleDownloadTemplate}
-              >
-                Download Sample Template
-              </Button>
+            {/* Combined Analysis Section */}
+            <div className="mt-8">
+              <h3 className="text-lg font-medium mb-4">Run Vulnerability Analysis</h3>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <p className="text-gray-700 mb-4">
+                  Use this feature to send both files to our analysis engine and get AI-assisted vulnerability assessment results.
+                </p>
+                {analysisError && (
+                  <div className="mt-2 mb-4 text-red-600 text-sm">
+                    {analysisError}
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Asset File:</p>
+                    <p className="text-sm font-medium">{assetFile ? assetFile.name : "Not selected"}</p>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Vulnerability File:</p>
+                    <p className="text-sm font-medium">{vulnFile ? vulnFile.name : "Not selected"}</p>
+                  </div>
+                  <Button
+                    onClick={handleBothFilesAnalysis}
+                    disabled={isAnalyzing || !assetFile || !vulnFile}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {isAnalyzing ? "Processing..." : "Analyze Vulnerabilities"}
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            {/* Upload Button */}
+            {/* Templates Section */}
             <div className="mt-8">
-              <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-lg">
-                UPLOAD FILES
-              </Button>
-              <p className="text-center text-sm text-gray-500 mt-2">
-                Please ensure you upload both files Asset Inventory and Vulnerability Report
-              </p>
+              <h3 className="text-lg font-medium mb-4">Download Templates</h3>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <p className="text-gray-700 mb-4">
+                  Download template files for asset inventory and vulnerability reports to ensure proper format for uploads.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <Button onClick={handleDownloadTemplate} variant="outline">
+                    Download Asset Template
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </main>
