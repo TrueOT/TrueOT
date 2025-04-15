@@ -117,3 +117,21 @@ model VulnReport {
   @@unique([cveId, userId])
   @@index([userId])
 }
+
+model VulnerabilityAnalysis {
+  id                    String   @id @default(cuid())
+  cveId                 String
+  cveName               String
+  assetName             String
+  ipAddress             String
+  vulnerabilitySeverity String
+  predefinedSeverity    String
+  riskLevel             String
+  llmJustification      String   @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("vulnerability_analyses")
+  @@index([cveId])
+  @@index([assetName])
+}
