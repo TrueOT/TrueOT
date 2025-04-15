@@ -1,108 +1,127 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, ShieldAlert, Server, Mail } from "lucide-react";
+import { CalendarIcon, ShieldAlert, Server, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useParams } from "next/navigation";
+import { VulnerabilityAnalysis } from '@prisma/client';
 
-// This would typically come from an API
-const getVulnerabilityData = (id: string) => {
-  // Mock data - in a real app, this would be an API call
-  const vulnerabilities = {
-    "CVE-2024-101": {
-      title: "PLC Firmware Exploit",
-      severity: "Critical",
-      whatHappened: "Exploiting vulnerabilities in this firmware can allow attackers to Modify the PLC's instructions, potentially disrupting industrial processes Disable safety protocols, leading to unsafe operating conditions.",
-      occurredAt: "17/10/24, 22:05",
-      lastSeen: "17/10/24, 22:05",
-      state: "UNRESOLVED",
-      detectedBy: "Scanning tool execution",
-      sourceAsset: {
-        name: "PLC-01",
-        ipAddress: "192.168.10.10",
-        zones: ["ZONE A"]
-      },
-      recommendations: [
-        "Regular Firmware Updates: Keep PLC firmware up to date to patch known vulnerabilities.",
-        "Isolate PLCs from external networks to limit exposure.",
-        "Implement strict authentication and authorization protocols."
-      ]
-    },
-    "CVE-2023-215": {
-      title: "SCADA Command Injection",
-      severity: "High",
-      whatHappened: "A command injection vulnerability in the SCADA system could allow unauthorized command execution, potentially leading to system compromise.",
-      occurredAt: "15/10/24, 14:30",
-      lastSeen: "17/10/24, 09:15",
-      state: "MITIGATED",
-      detectedBy: "Security Audit",
-      sourceAsset: {
-        name: "SCADA-Server",
-        ipAddress: "10.10.5",
-        zones: ["ZONE B"]
-      },
-      recommendations: [
-        "Apply latest security patches",
-        "Implement input validation",
-        "Enable comprehensive logging and monitoring"
-      ]
-    }
-  };
-  
-  return vulnerabilities[id as keyof typeof vulnerabilities];
-};
+// Define a type for the expected API response structure for the LIST endpoint
+interface VulnerabilityListApiResponse {
+  status: string;
+  data: VulnerabilityAnalysis[]; // Expecting an array
+  message?: string;
+}
+
+// Define a structure for the detailed vulnerability data expected by the component
+// (Adjust this based on the actual structure needed and returned by your API)
+interface DetailedVulnerabilityData extends VulnerabilityAnalysis {
+  // Add any additional transformed/specific fields if needed
+  // For now, let's assume VulnerabilityAnalysis is sufficient
+  // If the API returns slightly different fields, map them here or adjust the type
+}
 
 export default function DetailsPage() {
   const params = useParams();
   const id = params?.id as string;
+  const [vulnerabilityData, setVulnerabilityData] = useState<DetailedVulnerabilityData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!id) {
+  useEffect(() => {
+    if (!id) {
+      setError("Invalid vulnerability ID.");
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchAndFindVulnerability = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Fetch the entire list of vulnerabilities
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/ot-analysis`);
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch vulnerability list: ${res.statusText}`);
+        }
+
+        const result: VulnerabilityListApiResponse = await res.json();
+
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          // Find the specific vulnerability by ID in the list
+          const foundVulnerability = result.data.find(vuln => vuln.id === id);
+
+          if (foundVulnerability) {
+            setVulnerabilityData(foundVulnerability as DetailedVulnerabilityData);
+          } else {
+            // List fetched successfully, but the specific ID was not found
+            throw new Error("Vulnerability not found in the list.");
+          }
+        } else {
+          throw new Error(result.message || "Failed to load vulnerability list or invalid format.");
+        }
+      } catch (err) {
+        console.error("Error fetching/finding vulnerability:", err);
+        setError(err instanceof Error ? err.message : "An unknown error occurred.");
+        setVulnerabilityData(null); // Clear data on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAndFindVulnerability();
+  }, [id]); // Re-run effect if ID changes
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6 flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2">Loading vulnerability details...</span>
+      </div>
+    );
+  }
+
+  if (error) {
     return (
       <div className="container mx-auto p-6">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          Invalid vulnerability ID
+          Error: {error}
         </div>
       </div>
     );
   }
 
-  const vulnerabilityData = getVulnerabilityData(id);
-
   if (!vulnerabilityData) {
+    // This case should ideally be caught by the error state now, but keep as a fallback
     return (
       <div className="container mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          Vulnerability not found
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded">
+          Vulnerability data could not be loaded.
         </div>
       </div>
     );
   }
 
   const handleShareViaEmail = () => {
-    const subject = `Vulnerability Alert: ${vulnerabilityData.title}`;
+    const subject = `Vulnerability Alert: ${vulnerabilityData.cveId || 'N/A'}`;
     const body = `
 Vulnerability Details:
 
-Title: ${vulnerabilityData.title}
-Severity: ${vulnerabilityData.severity}
-State: ${vulnerabilityData.state}
+CVE ID: ${vulnerabilityData.cveId || 'N/A'}
+CVE Name: ${vulnerabilityData.cveName || 'N/A'}
+Severity: ${vulnerabilityData.vulnerabilitySeverity || 'N/A'}
+Risk Level: ${vulnerabilityData.riskLevel || 'N/A'}
+Justification: ${vulnerabilityData.llmJustification || 'N/A'}
 
-What Happened:
-${vulnerabilityData.whatHappened}
+Asset Details:
+- Name: ${vulnerabilityData.assetName || 'N/A'}
+- IP Address: ${vulnerabilityData.ipAddress || 'N/A'}
 
-Timeline:
-- Occurred At: ${vulnerabilityData.occurredAt}
-- Last Seen: ${vulnerabilityData.lastSeen}
-- Detected By: ${vulnerabilityData.detectedBy}
-
-Source Asset Details:
-- Name: ${vulnerabilityData.sourceAsset.name}
-- IP Address: ${vulnerabilityData.sourceAsset.ipAddress}
-- Zones: ${vulnerabilityData.sourceAsset.zones.join(', ')}
-
-Recommendations:
-${vulnerabilityData.recommendations.map(rec => `- ${rec}`).join('\n')}
+// Add other relevant fields from vulnerabilityData if needed
+// Example: Created At: ${vulnerabilityData.createdAt ? new Date(vulnerabilityData.createdAt).toLocaleString() : 'N/A'}
     `.trim();
 
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -114,8 +133,10 @@ ${vulnerabilityData.recommendations.map(rec => `- ${rec}`).join('\n')}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <ShieldAlert className="h-8 w-8 text-red-500" />
-          <h1 className="text-2xl font-bold">{vulnerabilityData.title}</h1>
-          <Badge variant="destructive">{vulnerabilityData.severity}</Badge>
+          <h1 className="text-2xl font-bold">{vulnerabilityData.cveName || vulnerabilityData.cveId || 'Vulnerability Details'}</h1>
+          <Badge variant={vulnerabilityData.vulnerabilitySeverity?.toLowerCase() === 'critical' ? 'destructive' : 'secondary'}>
+            {vulnerabilityData.vulnerabilitySeverity || 'Unknown Severity'}
+          </Badge>
         </div>
         <Button
           variant="outline"
@@ -133,39 +154,27 @@ ${vulnerabilityData.recommendations.map(rec => `- ${rec}`).join('\n')}
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">WHAT HAPPENED</h3>
+            <h3 className="font-semibold mb-2">LLM Justification</h3>
             <p className="text-muted-foreground">
-              {vulnerabilityData.whatHappened}
+              {vulnerabilityData.llmJustification || 'No justification provided.'}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">OCCURRED AT:</h3>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                <span>{vulnerabilityData.occurredAt}</span>
+          {vulnerabilityData.createdAt && (
+             <div>
+              <h3 className="font-semibold mb-2">Detected At:</h3>
+               <div className="flex items-center gap-2">
+                 <CalendarIcon className="h-4 w-4" />
+                 <span>{new Date(vulnerabilityData.createdAt).toLocaleString()}</span>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">LAST SEEN:</h3>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                <span>{vulnerabilityData.lastSeen}</span>
-              </div>
-            </div>
+             </div>
+          )}
+
+          <div>
+              <h3 className="font-semibold mb-2">RISK LEVEL:</h3>
+              <Badge variant="outline">{vulnerabilityData.riskLevel || 'Unknown'}</Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">STATE:</h3>
-              <Badge variant="outline">{vulnerabilityData.state}</Badge>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">DETECTED BY:</h3>
-              <span>{vulnerabilityData.detectedBy}</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -179,37 +188,14 @@ ${vulnerabilityData.recommendations.map(rec => `- ${rec}`).join('\n')}
             <div className="space-y-2">
               <div>
                 <h3 className="font-semibold">NAME:</h3>
-                <p>{vulnerabilityData.sourceAsset.name}</p>
+                <p>{vulnerabilityData.assetName || 'N/A'}</p>
               </div>
               <div>
                 <h3 className="font-semibold">IP ADDRESS:</h3>
-                <p>{vulnerabilityData.sourceAsset.ipAddress}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold">ZONES:</h3>
-                <div className="flex gap-2">
-                  {vulnerabilityData.sourceAsset.zones.map((zone) => (
-                    <Badge key={zone} variant="secondary">
-                      {zone}
-                    </Badge>
-                  ))}
-                </div>
+                <p>{vulnerabilityData.ipAddress || 'N/A'}</p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="text-lg font-semibold">
-          Recommendation
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc pl-6 space-y-2">
-            {vulnerabilityData.recommendations.map((rec, index) => (
-              <li key={index}>{rec}</li>
-            ))}
-          </ul>
         </CardContent>
       </Card>
     </div>
