@@ -117,3 +117,22 @@ model VulnReport {
   @@unique([cveId, userId])
   @@index([userId])
 }
+
+model VulnerabilityAnalysis {
+  id                  String   @id @default(cuid())
+  cveId               String
+  cveName             String
+  assetName           String
+  ipAddress           String
+  vulnerabilitySeverity String
+  predefinedSeverity   String
+  riskLevel           String
+  llmJustification    String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  userId              String   // Keep the field but remove the unique constraint for now
+
+  @@map("vulnerability_analyses")
+  @@index([cveId])
+  @@index([assetName])
+} 
