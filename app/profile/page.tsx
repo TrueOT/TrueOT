@@ -253,15 +253,6 @@ export default function ProfilePage() {
                     {uploadError}
                   </div>
                 )}
-                {assetFile && (
-                  <Button
-                    onClick={handleAssetUpload}
-                    disabled={isUploading}
-                    className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isUploading ? "Uploading..." : "Upload Asset Inventory"}
-                  </Button>
-                )}
               </div>
 
               {/* Vulnerability Report Upload */}
@@ -292,15 +283,6 @@ export default function ProfilePage() {
                   <div className="mt-2 text-red-600 text-sm">
                     {uploadError}
                   </div>
-                )}
-                {vulnFile && (
-                  <Button
-                    onClick={handleVulnUpload}
-                    disabled={isUploading}
-                    className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isUploading ? "Uploading..." : "Upload Vulnerability Report"}
-                  </Button>
                 )}
               </div>
             </div>

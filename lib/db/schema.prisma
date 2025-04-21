@@ -21,7 +21,6 @@ model User {
   assets        Asset[]
   Authenticator Authenticator[]
   sessions      Session[]
-  vulnReports   VulnReport[]
 }
 
 model Account {
@@ -96,27 +95,6 @@ model Asset {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model VulnReport {
-  id               String   @id @default(cuid())
-  cveId            String
-  cweId            String?
-  cveName          String
-  cvssVersion      String
-  cvssScore        Float
-  originalSeverity String   @default("Unknown")
-  newSeverity      String   @default("Unknown")
-  description      String   @db.Text
-  ipAddress        String?
-  device           String?
-  status           String   @default("Open")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([cveId, userId])
-  @@index([userId])
-}
 
 model VulnerabilityAnalysis {
   id                  String   @id @default(cuid())
@@ -131,6 +109,7 @@ model VulnerabilityAnalysis {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   userId              String   // Keep the field but remove the unique constraint for now
+  status           String   @default("Open")
 
   @@map("vulnerability_analyses")
   @@index([cveId])
