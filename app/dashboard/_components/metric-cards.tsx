@@ -1,3 +1,5 @@
+import { prisma } from "../../../lib/db/prisma";
+
 interface MetricCardProps {
     title: string;
     value: number;
@@ -14,14 +16,34 @@ interface MetricCardProps {
     );
   }
   
-  export function MetricCards() {
+  export async function MetricCards() {
+    // Fetch counts from the database
+    const vulnerabilityCount = await prisma.vulnerabilityAnalysis.count();
+    const criticalVulnerabilities = await prisma.vulnerabilityAnalysis.count({
+      where: {
+        vulnerabilitySeverity: "CRITICAL"
+      }
+    });
+    const openVulnerabilities = await prisma.vulnerabilityAnalysis.count({
+      where: {
+        status: "Open"
+      }
+    });
+    const mitigatedVulnerabilities = await prisma.vulnerabilityAnalysis.count({
+      where: {
+        status: {
+          not: "Open"
+        }
+      }
+    });
+
     return (
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard title="Total Devices" value={781} subtitle="Devices" />
-        <MetricCard title="Critical Vulnerabilities" value={102} subtitle="Vulnerabilities" />
-        <MetricCard title="Open Vulnerabilities" value={213} subtitle="Vulnerabilities" />
+        <MetricCard title="Total Devices" value={vulnerabilityCount} subtitle="Vulnerabilities" />
+        <MetricCard title="Critical Vulnerabilities" value={criticalVulnerabilities} subtitle="Vulnerabilities" />
+        <MetricCard title="Open Vulnerabilities" value={openVulnerabilities} subtitle="Vulnerabilities" />
         {/* <MetricCard title="Unpatched Devices" value={27} subtitle="Devices" /> */}
-        <MetricCard title="Mitigated Vulnerabilities" value={27} subtitle="Devices" />
+        <MetricCard title="Mitigated Vulnerabilities" value={mitigatedVulnerabilities} subtitle="Devices" />
       </div>
     );
   }
