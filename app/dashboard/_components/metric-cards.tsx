@@ -21,7 +21,7 @@ interface MetricCardProps {
     const vulnerabilityCount = await prisma.vulnerabilityAnalysis.count();
     const criticalVulnerabilities = await prisma.vulnerabilityAnalysis.count({
       where: {
-        vulnerabilitySeverity: "CRITICAL"
+        riskLevel: "Critical"
       }
     });
     const openVulnerabilities = await prisma.vulnerabilityAnalysis.count({
@@ -32,10 +32,10 @@ interface MetricCardProps {
     const mitigatedVulnerabilities = await prisma.vulnerabilityAnalysis.count({
       where: {
         status: {
-          not: "Open"
+          in: ["Closed", "Mitigated"]
         }
       }
-    });
+    });    
 
     return (
       <div className="grid gap-4 md:grid-cols-4">
