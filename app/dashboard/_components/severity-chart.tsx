@@ -85,7 +85,7 @@ export function SeverityChart() {
           </PieChart>
         </ResponsiveContainer>
         {/* Percentage Display */}
-        <div 
+        {/* <div 
           className="absolute"
           style={{
             top: "30%",
@@ -96,7 +96,7 @@ export function SeverityChart() {
           {!isLoading && highestPercentage > 0 && (
             <div className="text-3xl font-semibold">{highestPercentage}%</div>
           )}
-        </div>
+        </div> */}
       </div>
       {/* Legend */}
       <div className="flex items-center justify-center gap-3 mt-4">
