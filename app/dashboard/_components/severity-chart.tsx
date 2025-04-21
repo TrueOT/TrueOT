@@ -95,7 +95,7 @@ export function SeverityChart() {
         >
           {!isLoading && highestPercentage > 0 && (
             <div className="text-3xl font-semibold">{highestPercentage}%</div>
-          )}
+          )} 
         </div> */}
       </div>
       {/* Legend */}
