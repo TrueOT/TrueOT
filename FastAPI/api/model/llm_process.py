@@ -96,9 +96,15 @@ class LLMParser:
         columns = [ "Predefined Severity", "Note" ,"security_description", "Classification", "\tSafety Impact", "Hosting", "Vulnerability Severity"]
         df = merge_df[columns]
         text_input = ""
-
-        for index, row in df.iterrows():
-            text_input += f"\n{index}. CVE Description from the API: {row.iloc[2]},    Asset Classification Note: {row.iloc[1]},    Predefined Severity: {row.iloc[0]},   Asset classification:{row.iloc[3]},    Safety Impact: {row.iloc[4]},   Hosting: {row.iloc[5]},  Vulnerability Severity: {row.iloc[6]} "
+        
+        # Create a mapping of original DataFrame indices to sequential indices for the LLM
+        index_map = {}
+        for i, idx in enumerate(df.index):
+            index_map[i] = idx  # Map sequential index (0, 1, 2...) to actual DataFrame index
+            
+        # Generate input text with explicit sequential indices
+        for i, (idx, row) in enumerate(df.iterrows()):
+            text_input += f"\n{i+1}. CVE Description from the API: {row.iloc[2]},    Asset Classification Note: {row.iloc[1]},    Predefined Severity: {row.iloc[0]},   Asset classification:{row.iloc[3]},    Safety Impact: {row.iloc[4]},   Hosting: {row.iloc[5]},  Vulnerability Severity: {row.iloc[6]} "
 
         system_prompt = """
             ## ROLE:
@@ -112,7 +118,7 @@ class LLMParser:
             1. **Asset Criticality** — How essential the asset is to process continuity and safety.
             2. **Safety Impact** — The level of physical or operational danger posed by successful exploitation.
             3. **Vulnerability Severity on the Asset** — The scanner/logic-assigned severity, which must be validated in context.
-            4. **CVE Technical Description** — The vulnerability’s capabilities, exploitability, and attack vector.
+            4. **CVE Technical Description** — The vulnerability's capabilities, exploitability, and attack vector.
             5. **Hosting Context** — Whether the asset is isolated, segmented, or exposed (DMZ, internet-facing, flat network).
 
             Use these guidelines for structured reasoning:
@@ -158,7 +164,7 @@ class LLMParser:
             - Requirement for authentication or user interaction
 
             ###  STEP 2: ANALYZE ASSET CONTEXT (Asset Classification Note)
-            - What is the asset’s role in the system?
+            - What is the asset's role in the system?
             - E.g., HMI, PLC, engineering workstation, safety controller
             - Assess business/safety criticality
             - Evaluate exposure:
@@ -185,7 +191,7 @@ class LLMParser:
             **For Isolated Assets:**
             - Consider all provided fields
             - Adjust severity realistically:
-            - Example: “RCE is irrelevant due to full isolation and no physical access”
+            - Example: "RCE is irrelevant due to full isolation and no physical access"
 
             ###  AVOID FALSE REASONING AND LOGICAL FALLACIES
 
@@ -232,9 +238,11 @@ class LLMParser:
             ---
 
             ### 5.  FINAL DECISION & OUTPUT
-            If you assign "High" or "Critical" risk, explicitly explain **how the vulnerability affects safety or process control**, not just that it's “severe” or “critical.” Avoid vague statements like “it’s critical despite isolation.”
+            If you assign "High" or "Critical" risk, explicitly explain **how the vulnerability affects safety or process control**, not just that it's "severe" or "critical." Avoid vague statements like "it's critical despite isolation."
             Return a **valid JSON** object with a final risk level and justification for each input.
 
+            IMPORTANT: The input starts with index 1, so your output should match that numbering.
+            
             #### Format:
             ```json
             {{
@@ -250,7 +258,17 @@ class LLMParser:
         user_template = """
             Please determine the Risk Level for the following sets of OT Cybersecurity parameters based on the instructions defined in the system prompt. If the Hosting is 'isolated', consider all factors specified (CVE Description, Asset Note, Asset classification, Safety Impact, Hosting, Vulnerability Severity) for the final output. Otherwise, evaluate based on the system prompt.
 
-            Generate a JSON output with keys 'risk_level1', 'risk_level2', etc., corresponding to each input set below:
+            IMPORTANT: Numbers in the input correspond to item numbers in the output. Your response must be a SINGLE JSON object with numbered keys matching the input numbering. For example:
+            {{
+                "risk_level1": "Medium",
+                "justification1": "First justification...",
+                "risk_level2": "High", 
+                "justification2": "Second justification...",
+                "risk_level3": "Low",
+                "justification3": "Third justification..."
+            }}
+
+            DO NOT return an array or multiple JSON objects. Use numbered suffixes (1, 2, 3, etc.) for each risk_level and justification key that EXACTLY match the input item numbers.
 
             ## Input Sets Start Here:
             {text_input}
@@ -265,19 +283,42 @@ class LLMParser:
         prompt = prompt_template.invoke({"text_input": text_input})
         response = self.model.invoke(prompt)
         
-        risk_levels = []
-        justifications = []
+        # Initialize dictionaries to store risk levels and justifications
+        risk_levels = {}
+        justifications = {}
 
-        # Get all unique indices from the response keys
-        # indices = sorted({key.lstrip("risk_level").lstrip("justification")[-1] for key in response.keys()}, key=int)
+        # Parse response keys and values
+        for key, value in response.items():
+            if key.startswith('risk_level'):
+                try:
+                    # Extract index number from key (e.g., 'risk_level1' -> 1)
+                    idx_str = key.replace('risk_level', '')
+                    idx = int(idx_str) - 1  # Convert to 0-based index for our mapping
+                    if 0 <= idx < len(index_map):
+                        # Map to original DataFrame index
+                        orig_idx = index_map[idx]
+                        risk_levels[orig_idx] = value
+                except (ValueError, KeyError) as e:
+                    # Handle any parsing errors
+                    print(f"Error parsing index from {key}: {e}")
+                    continue
+                    
+            elif key.startswith('justification'):
+                try:
+                    # Extract index number from key (e.g., 'justification1' -> 1)
+                    idx_str = key.replace('justification', '')
+                    idx = int(idx_str) - 1  # Convert to 0-based index for our mapping
+                    if 0 <= idx < len(index_map):
+                        # Map to original DataFrame index
+                        orig_idx = index_map[idx]
+                        justifications[orig_idx] = value
+                except (ValueError, KeyError) as e:
+                    # Handle any parsing errors
+                    print(f"Error parsing index from {key}: {e}")
+                    continue
 
-        # Loop through based on discovered indices
-        for i in range(len(response) // 2):
-            risk_levels.append(response.get(f"risk_level{i}", ""))
-            justifications.append(response.get(f"justification{i}", ""))
-
-        # Add to your DataFrame
-        merge_df["risk_level"] = risk_levels
-        merge_df["llm_justification"] = justifications
+        # Add to DataFrame with proper alignment
+        merge_df["risk_level"] = merge_df.index.map(lambda x: risk_levels.get(x, "Unknown"))
+        merge_df["llm_justification"] = merge_df.index.map(lambda x: justifications.get(x, "No justification provided"))
         
         return merge_df
