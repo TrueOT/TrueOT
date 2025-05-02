@@ -162,6 +162,15 @@ Asset Details:
             </p>
           </div>
 
+          {vulnerabilityData.securityDescription && (
+            <div>
+              <h3 className="font-semibold mb-2">Security Description:</h3>
+              <p className="text-muted-foreground mb-4">
+                {vulnerabilityData.securityDescription}
+              </p>
+            </div>
+          )}
+
           <div>
             <h3 className="font-semibold mb-2">Detected by:</h3>
             <p className="text-muted-foreground mb-4">Vulnerability Assessment Scanning Tool</p>
