@@ -133,9 +133,12 @@ Asset Details:
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <ShieldAlert className="h-8 w-8 text-red-500" />
-          <h1 className="text-2xl font-bold">{vulnerabilityData.cveName || vulnerabilityData.cveId || 'Vulnerability Details'}</h1>
+          <h1 className="text-2xl font-bold">{vulnerabilityData.cveId || 'Vulnerability Details'}</h1>
           <Badge variant={vulnerabilityData.vulnerabilitySeverity?.toLowerCase() === 'critical' ? 'destructive' : 'secondary'}>
             {vulnerabilityData.vulnerabilitySeverity || 'Unknown Severity'}
+          </Badge>
+          <Badge variant="outline" className="ml-2">
+            Status: {vulnerabilityData.status || 'Unknown'}
           </Badge>
         </div>
         <Button
@@ -150,9 +153,20 @@ Asset Details:
 
       <Card>
         <CardHeader className="text-lg font-semibold">
-          Detection Information
+          Vulnerability Details
         </CardHeader>
         <CardContent className="space-y-4">
+          <div>
+            <p className="mb-4">
+              {vulnerabilityData.cveName || 'No vulnerability description available.'}
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-2">Detected by:</h3>
+            <p className="text-muted-foreground mb-4">Vulnerability Assessment Scanning Tool</p>
+          </div>
+
           <div>
             <h3 className="font-semibold mb-2">LLM Justification</h3>
             <p className="text-muted-foreground">
@@ -171,7 +185,7 @@ Asset Details:
           )}
 
           <div>
-              <h3 className="font-semibold mb-2">RISK LEVEL:</h3>
+              <h3 className="font-semibold mb-2">New Severity:</h3>
               <Badge variant="outline">{vulnerabilityData.riskLevel || 'Unknown'}</Badge>
           </div>
 
