@@ -1,5 +1,5 @@
 import { MetricCards } from "./_components/metric-cards"
-import { VulnerabilityTable } from "./_components/vulnerability-table"
+import { VulnerabilityTableContainer } from "./_components/vulnerability-table-container"
 import { SeverityChart } from "./_components/severity-chart"
 
 export default async function DashboardPage() {
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
           <SeverityChart />
         </div>
       </div>
-      <VulnerabilityTable />
+      <VulnerabilityTableContainer />
     </div>
   )
 }
