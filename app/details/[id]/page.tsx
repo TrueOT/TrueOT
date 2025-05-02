@@ -162,7 +162,7 @@ Asset Details:
 
           {vulnerabilityData.createdAt && (
              <div>
-              <h3 className="font-semibold mb-2">Detected At:</h3>
+              <h3 className="font-semibold mb-2">Uploaded At:</h3>
                <div className="flex items-center gap-2">
                  <CalendarIcon className="h-4 w-4" />
                  <span>{new Date(vulnerabilityData.createdAt).toLocaleString()}</span>
