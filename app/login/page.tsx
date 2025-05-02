@@ -22,7 +22,7 @@ export default function LoginPage() {
         email: e.currentTarget.email.value.toLowerCase(),
         password: e.currentTarget.password.value,
         redirect: false,
-        callbackUrl: "/dashboard"
+        callbackUrl: "/executive-summary"
       })
 
       if (result?.error) {
@@ -31,7 +31,7 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        router.push("/dashboard")
+        router.push("/executive-summary")
         router.refresh()
       }
     } catch (err) {
