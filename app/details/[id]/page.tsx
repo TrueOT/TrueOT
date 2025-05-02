@@ -171,6 +171,20 @@ Asset Details:
             </div>
           )}
 
+          {vulnerabilityData.cveId && (
+            <div>
+              <h3 className="font-semibold mb-2">For More Details Visit:</h3>
+              <a 
+                href={`https://nvd.nist.gov/vuln/detail/${vulnerabilityData.cveId.replace(/\s+/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                https://nvd.nist.gov/vuln/detail/{vulnerabilityData.cveId.replace(/\s+/g, '')}
+              </a>
+            </div>
+          )}
+
           <div>
             <h3 className="font-semibold mb-2">Detected by:</h3>
             <p className="text-muted-foreground mb-4">Vulnerability Assessment Scanning Tool</p>
