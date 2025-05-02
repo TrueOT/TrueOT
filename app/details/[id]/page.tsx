@@ -133,9 +133,12 @@ Asset Details:
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <ShieldAlert className="h-8 w-8 text-red-500" />
-          <h1 className="text-2xl font-bold">{vulnerabilityData.cveName || vulnerabilityData.cveId || 'Vulnerability Details'}</h1>
+          <h1 className="text-2xl font-bold">{vulnerabilityData.cveId || 'Vulnerability Details'}</h1>
           <Badge variant={vulnerabilityData.vulnerabilitySeverity?.toLowerCase() === 'critical' ? 'destructive' : 'secondary'}>
             {vulnerabilityData.vulnerabilitySeverity || 'Unknown Severity'}
+          </Badge>
+          <Badge variant="outline" className="ml-2">
+            Status: {vulnerabilityData.status || 'Unknown'}
           </Badge>
         </div>
         <Button
@@ -150,9 +153,43 @@ Asset Details:
 
       <Card>
         <CardHeader className="text-lg font-semibold">
-          Detection Information
+          Vulnerability Details
         </CardHeader>
         <CardContent className="space-y-4">
+          <div>
+            <p className="mb-4">
+              {vulnerabilityData.cveName || 'No vulnerability description available.'}
+            </p>
+          </div>
+
+          {vulnerabilityData.securityDescription && (
+            <div>
+              <h3 className="font-semibold mb-2">Security Description:</h3>
+              <p className="text-muted-foreground mb-4">
+                {vulnerabilityData.securityDescription}
+              </p>
+            </div>
+          )}
+
+          {vulnerabilityData.cveId && (
+            <div>
+              <h3 className="font-semibold mb-2">For More Details Visit:</h3>
+              <a 
+                href={`https://nvd.nist.gov/vuln/detail/${vulnerabilityData.cveId.replace(/\s+/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                https://nvd.nist.gov/vuln/detail/{vulnerabilityData.cveId.replace(/\s+/g, '')}
+              </a>
+            </div>
+          )}
+
+          <div>
+            <h3 className="font-semibold mb-2">Detected by:</h3>
+            <p className="text-muted-foreground mb-4">Vulnerability Assessment Scanning Tool</p>
+          </div>
+
           <div>
             <h3 className="font-semibold mb-2">LLM Justification</h3>
             <p className="text-muted-foreground">
@@ -162,7 +199,7 @@ Asset Details:
 
           {vulnerabilityData.createdAt && (
              <div>
-              <h3 className="font-semibold mb-2">Detected At:</h3>
+              <h3 className="font-semibold mb-2">Uploaded At:</h3>
                <div className="flex items-center gap-2">
                  <CalendarIcon className="h-4 w-4" />
                  <span>{new Date(vulnerabilityData.createdAt).toLocaleString()}</span>
@@ -171,7 +208,7 @@ Asset Details:
           )}
 
           <div>
-              <h3 className="font-semibold mb-2">RISK LEVEL:</h3>
+              <h3 className="font-semibold mb-2">New Severity:</h3>
               <Badge variant="outline">{vulnerabilityData.riskLevel || 'Unknown'}</Badge>
           </div>
 

@@ -69,12 +69,12 @@ export function SeverityChart() {
             <Pie
               data={chartData}
               cx="50%"
-              cy="100%"
-              startAngle={180}
-              endAngle={0}
-              innerRadius={90}
-              outerRadius={110}
-              paddingAngle={0}
+              cy="50%"
+              startAngle={0}
+              endAngle={360}
+              innerRadius={0}
+              outerRadius={50}
+              paddingAngle={2}
               dataKey="value"
               strokeWidth={0}
             >

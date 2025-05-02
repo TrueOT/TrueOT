@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, User, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, User, Settings, LogOut, BarChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { signOut } from "next-auth/react";
@@ -11,6 +11,11 @@ import { useUserSession } from "@/lib/hooks/useUserSession";
 const navigation = [
   {
     name: "Dashboard",
+    href: "/executive-summary",
+    icon: BarChart,
+  },
+  {
+    name: "Analysis",
     href: "/dashboard",
     icon: LayoutDashboard,
   },

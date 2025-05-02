@@ -106,6 +106,7 @@ model VulnerabilityAnalysis {
   predefinedSeverity   String
   riskLevel           String
   llmJustification    String
+  securityDescription String    @db.Text
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   userId              String   // Keep the field but remove the unique constraint for now

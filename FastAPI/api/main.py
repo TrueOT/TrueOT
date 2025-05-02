@@ -33,7 +33,7 @@ BASE_DIR = Path(__file__).parent
 PATH_RULE = BASE_DIR / "data" / "predefined roles.csv"
 
 # Output columns
-RESULT_COLUMNS = ["CVE ID", "CVE Name", "Asset Name", "IP Address", "Vulnerability Severity", "Predefined Severity", "risk_level", "llm_justification"]
+RESULT_COLUMNS = ["CVE ID", "CVE Name", "Asset Name", "IP Address", "Vulnerability Severity", "Predefined Severity", "risk_level", "llm_justification", "security_description"]
 
 # Initialize LLM model
 llm = LLMParser(model_name="deepseek-r1-distill-llama-70b", model_provider="groq")
@@ -76,12 +76,38 @@ def process_files(
     # Merge and process dataframes
     result_df = process_data(asset_df, scan_df)
     
-    # Return the data as JSON
+    # Add metadata about description lengths to help diagnose truncation issues
+    description_metadata = {}
+    if 'security_description' in result_df.columns:
+        for i, desc in enumerate(result_df['security_description']):
+            if desc and desc != 'None':
+                description_metadata[i] = {
+                    'cve_id': result_df.iloc[i].get('CVE ID', 'unknown'),
+                    'length': len(desc),
+                    'preview': desc[:50] + '...' if len(desc) > 50 else desc
+                }
+    
+    # Create a copy of the data with explicit string conversion
+    record_list = []
+    for _, row in result_df.iterrows():
+        record = {}
+        for col in result_df.columns:
+            # Ensure each value is properly converted to string
+            if col == 'security_description' and row[col] and row[col] != 'None':
+                # Handle description carefully
+                full_desc = str(row[col]).strip()
+                record[col] = full_desc
+            else:
+                record[col] = str(row[col]) if not pd.isna(row[col]) else ""
+        record_list.append(record)
+    
+    # Return the data as JSON with special handling
     return JSONResponse(
         content={
             "status": "success",
-            "data": result_df.to_dict(orient="records"),
-            "columns": RESULT_COLUMNS
+            "data": record_list,  # Use our carefully prepared records
+            "columns": RESULT_COLUMNS,
+            "description_metadata": description_metadata
         }
     )
 
@@ -131,9 +157,32 @@ def process_data(asset_df, scan_df):
     )
     
     # Get security descriptions and analyze risks
-    merged_df["security_description"] = merged_df["CVE ID"].apply(
-        lambda cve: get_security_description(cve, API_KEYS)
+    print("Getting security descriptions from NVD API...")
+    security_descriptions = []
+    for cve_id in merged_df["CVE ID"]:
+        desc = get_security_description(cve_id, API_KEYS)
+        # Store as string and ensure it's not None
+        if desc:
+            # Clean and validate the description
+            desc = str(desc).strip()
+            security_descriptions.append(desc)
+        else:
+            security_descriptions.append("")
+    
+    # Add the descriptions to the dataframe
+    merged_df["security_description"] = security_descriptions
+    
+    # Ensure descriptions are properly stored as strings
+    merged_df["security_description"] = merged_df["security_description"].astype(str)
+    merged_df["security_description"] = merged_df["security_description"].apply(
+        lambda x: x if x != "None" and x != "nan" else ""
     )
+    
+    # Add debug print to check description lengths
+    print("Security Description Lengths:")
+    for idx, desc in enumerate(merged_df["security_description"]):
+        if desc and desc != "None" and desc != "nan":
+            print(f"Description {idx}: Length={len(desc)}, Preview={desc[:50]}...")
     
     rule_str = read_predefined_rules(PATH_RULE)
     
@@ -141,8 +190,8 @@ def process_data(asset_df, scan_df):
     merged_df = llm.risk_analyzer(merged_df, rule_str)
     merged_df = llm.refine_risk_level(merged_df)
     
-    # # Save intermediate result (consider making this optional or removing in production)
-    # merged_df.to_csv("merge_df.csv")
+    # Save intermediate result to verify full descriptions are preserved
+    merged_df.to_csv("debug_merge_df.csv", encoding='utf-8')
     
     # Select only the required columns
     return merged_df[RESULT_COLUMNS]

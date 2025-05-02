@@ -1,0 +1,20 @@
+Original string length: 315
+Original string: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
+
+After JSON serialization, length: 315
+JSON serialized: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
+
+After CSV serialization, length: 315
+CSV serialized: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
+
+After DataFrame JSON serialization, length: 315
+DataFrame JSON serialized: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
+
+After dict conversion, length: 315
+Dict conversion: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
+
+
+Final data check:
+Original length: 315
+After API serialization, length: 315
+API serialized: Incorrect Access Control in Beckhoff Automation GmbH & Co. KG CX9020 with firmware version CX9020_CB3011_WEC7_HPS_v602_TC31_B4016.6 allows remote attackers to bypass authentication via the 'CE Remote Display Tool' as it does not close the incoming connection on the Windows CE side if the credentials are incorrect.
