@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
           predefinedSeverity: item["Predefined Severity"],
           riskLevel: item["risk_level"],
           llmJustification: item["llm_justification"],
+          securityDescription: item["security_description"] || "",
           userId: session.user.id
         }
       });

@@ -101,10 +101,40 @@ class LLMParser:
         index_map = {}
         for i, idx in enumerate(df.index):
             index_map[i] = idx  # Map sequential index (0, 1, 2...) to actual DataFrame index
+        
+        # Debug: Print security descriptions before formatting for LLM
+        print("\nSecurity Descriptions in LLM Processing:")
+        for idx, row in df.iterrows():
+            desc = row.iloc[2]  # security_description
+            if desc and desc != "None":
+                print(f"Before LLM format, index {idx}: Length={len(desc)}, Preview={desc[:50]}...")
             
         # Generate input text with explicit sequential indices
         for i, (idx, row) in enumerate(df.iterrows()):
-            text_input += f"\n{i+1}. CVE Description from the API: {row.iloc[2]},    Asset Classification Note: {row.iloc[1]},    Predefined Severity: {row.iloc[0]},   Asset classification:{row.iloc[3]},    Safety Impact: {row.iloc[4]},   Hosting: {row.iloc[5]},  Vulnerability Severity: {row.iloc[6]} "
+            # Get security description and print its length
+            sec_desc = str(row.iloc[2])
+            if sec_desc and sec_desc != "None":
+                print(f"Adding to LLM input, index {idx}: Length={len(sec_desc)}")
+            
+            # Ensure full description is included - store in separate variable first
+            cve_desc = str(row.iloc[2]).strip() if str(row.iloc[2]) != "None" else "No description available"
+            
+            # Format with line breaks to avoid truncation
+            text_input += f"""
+{i+1}. CVE Description from the API: 
+{cve_desc}
+    
+Asset Classification Note: {row.iloc[1]}
+Predefined Severity: {row.iloc[0]}
+Asset classification: {row.iloc[3]}
+Safety Impact: {row.iloc[4]}
+Hosting: {row.iloc[5]}
+Vulnerability Severity: {row.iloc[6]}
+"""
+        
+        # Debug: Print a sample of the formatted text input
+        print("\nSample of text input to LLM (first 500 chars):")
+        print(text_input[:500])
 
         system_prompt = """
             ## ROLE:
