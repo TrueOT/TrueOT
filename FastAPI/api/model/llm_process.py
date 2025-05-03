@@ -3,9 +3,8 @@ from langchain.chat_models import init_chat_model
 
 
 class LLMParser:
-    def __init__(self, model_name = "deepseek-r1-distill-llama-70b", model_provider = "groq"):
+    def __init__(self, model_name="deepseek-r1-distill-llama-70b", model_provider="groq"):
         self.model = init_chat_model(model_name, model_provider=model_provider).with_structured_output(method="json_mode")
-    
     
     def risk_analyzer(self, merge_df, rule_str):
         columns = ["Classification", "\tSafety Impact", "Vulnerability Severity", "Hosting1"]
@@ -37,7 +36,7 @@ class LLMParser:
 
         {json_str}
 
-        #### Rules end here:
+        #### Rules end here
 
 
         ## Logic for Determining Risk Level:
@@ -69,13 +68,12 @@ class LLMParser:
 
         """
 
-
         user_template = """
         Please determine the Risk Level for the following sets of OT Cybersecurity parameters based on the rules defined in the system prompt. Generate a JSON output with keys 'risk_level1', 'risk_level2', etc., corresponding to each input set below:
 
         ## Input Sets Start Here:
         {text_input}
-        ## Input Sets End Here:
+        ## Input Sets End Here
 
 
         """
@@ -89,40 +87,19 @@ class LLMParser:
         merge_df["Predefined Severity"] = predefined_severity
         return merge_df   
     
-    
-    
     def refine_risk_level(self, merge_df):
-        
-        columns = [ "Predefined Severity", "Note" ,"security_description", "Classification", "\tSafety Impact", "Hosting", "Vulnerability Severity"]
+        columns = ["Predefined Severity", "Note", "security_description", "Classification", "\tSafety Impact", "Hosting", "Vulnerability Severity"]
         df = merge_df[columns]
-        text_input = ""
         
-        # Create a mapping of original DataFrame indices to sequential indices for the LLM
-        index_map = {}
-        for i, idx in enumerate(df.index):
-            index_map[i] = idx  # Map sequential index (0, 1, 2...) to actual DataFrame index
-        
-        # Debug: Print security descriptions before formatting for LLM
-        print("\nSecurity Descriptions in LLM Processing:")
-        for idx, row in df.iterrows():
-            desc = row.iloc[2]  # security_description
-            if desc and desc != "None":
-                print(f"Before LLM format, index {idx}: Length={len(desc)}, Preview={desc[:50]}...")
-            
-        # Generate input text with explicit sequential indices
-        for i, (idx, row) in enumerate(df.iterrows()):
-            # Get security description and print its length
-            sec_desc = str(row.iloc[2])
-            if sec_desc and sec_desc != "None":
-                print(f"Adding to LLM input, index {idx}: Length={len(sec_desc)}")
-            
-            # Ensure full description is included - store in separate variable first
-            cve_desc = str(row.iloc[2]).strip() if str(row.iloc[2]) != "None" else "No description available"
-            
-            # Format with line breaks to avoid truncation
-            text_input += f"""
-{i+1}. CVE Description from the API: 
-{cve_desc}
+        # Initialize dictionaries to store results
+        risk_levels = {}
+        justifications = {}
+
+        for index, row in df.iterrows():
+            # Create input for this vulnerability
+            single_input = f"""
+{index}. CVE Description from the API: 
+{row.iloc[2]}
     
 Asset Classification Note: {row.iloc[1]}
 Predefined Severity: {row.iloc[0]}
@@ -131,223 +108,184 @@ Safety Impact: {row.iloc[4]}
 Hosting: {row.iloc[5]}
 Vulnerability Severity: {row.iloc[6]}
 """
+
+            system_prompt = """
+## 1. ROLE & PERSONA
         
-        # Debug: Print a sample of the formatted text input
-        print("\nSample of text input to LLM (first 500 chars):")
-        print(text_input[:500])
-
-        system_prompt = """
-            ## ROLE:
-            You are a highly skilled Operational Technology (OT) Cybersecurity Analyst with deep expertise in industrial control systems (ICS), vulnerability evaluation, CVE analysis, and risk classification. You are expected to think like a real-world OT defender — carefully weighing threat scenarios against practical constraints and environmental context.
-
-            ## OBJECTIVE:
-            For each CVE and asset combination, provide a technically reasoned **risk level assessment**, supported by **clear, step-by-step justification**. Focus on realistic OT impact, not just theoretical severity. Your reasoning must consider exploitability, exposure, mitigations, asset isolation, and consequences (e.g., process disruption, safety).
-
-            ## REASONING FRAMEWORK:
-            You have access to the following dimensions:
-            1. **Asset Criticality** — How essential the asset is to process continuity and safety.
-            2. **Safety Impact** — The level of physical or operational danger posed by successful exploitation.
-            3. **Vulnerability Severity on the Asset** — The scanner/logic-assigned severity, which must be validated in context.
-            4. **CVE Technical Description** — The vulnerability's capabilities, exploitability, and attack vector.
-            5. **Hosting Context** — Whether the asset is isolated, segmented, or exposed (DMZ, internet-facing, flat network).
-
-            Use these guidelines for structured reasoning:
-
-            -  Asset Criticality:
-            - High → Safety controllers, core PLCs, shutdown systems.
-            - Medium → HMIs, engineering workstations.
-            - Low → Logging or non-control interfaces.
-
-            -  Safety Impact:
-            - Only escalate if the vulnerability could realistically lead to physical danger or operational harm.
-
-            -  Vulnerability Severity on Asset:
-            - Validate this using real-world exposure and exploitability.
-            - Do not blindly trust CVSS.
-
-            -  CVE Technical Details:
-            - Identify whether it enables RCE, DoS, logic manipulation, auth bypass, or only information exposure.
-
-            -  Hosting Context:
-            - Isolated → Escalate **only** with realistic paths (e.g., USB, supply chain).
-            - DMZ or Internet-facing → High exposure, higher risk.
-            - Internal/Flat network → Moderate risk; consider lateral movement.
-
-            Only escalate risk levels when the combined factors indicate realistic **OT impact** on safety, process control, or availability. Always justify decisions clearly.
-
-            ## INPUT YOU WILL RECEIVE:
-            1. **CVE Description** – Technical details, exploit vectors, CVSS, etc.
-            2. **Asset Classification Note** – Function, criticality, hosting, process role.
-            3. **Predefined Severity** – Initial rating based on rules.
-            4. **Optional Fields (when asset is isolated)** – Asset Classification, safety impact, hosting, etc.
-
-            ---
-
-            ## ANALYSIS PROCESS:
-
-            ###  STEP 1: ANALYZE THE VULNERABILITY (CVE Description)
-            - Does the vulnerability enable:
-            - Remote Code Execution, Denial of Service, Auth Bypass, Privilege Escalation, or Unsafe Commands?
-            - Assess:
-            - Attack complexity
-            - Known public exploits (PoCs, kits, malware)
-            - Requirement for authentication or user interaction
-
-            ###  STEP 2: ANALYZE ASSET CONTEXT (Asset Classification Note)
-            - What is the asset's role in the system?
-            - E.g., HMI, PLC, engineering workstation, safety controller
-            - Assess business/safety criticality
-            - Evaluate exposure:
-            - Air-gapped or externally reachable?
-            - Identify mitigations:
-            - Firewalls, ACLs, segmentation, monitoring, USB-only access, etc.
-
-            ###  STEP 3: APPLY SEVERITY ADJUSTMENT (RULE + REASONING)
-            Use the following logic with **justified overrides**:
-
-            **If Predefined Severity is "High" or "Critical":**
-            - Confirm if this is justified based on:
-            - Actual exploitability
-            - Contextual safety/process impact
-            - Exposure and mitigations
-            - Lower only with strong mitigation evidence in the asset note.
-
-            **If Predefined Severity is "Medium" or "Low":**
-            - Increase only if:
-            - Exploit is easy and public
-            - Asset is exposed
-            - Critical safety/process implications
-
-            **For Isolated Assets:**
-            - Consider all provided fields
-            - Adjust severity realistically:
-            - Example: "RCE is irrelevant due to full isolation and no physical access"
-
-            ###  AVOID FALSE REASONING AND LOGICAL FALLACIES
-
-            To ensure accuracy in OT-specific contexts, follow these principles:
-
-            -  Do **not** tie **confidentiality-related vulnerabilities** (e.g., cleartext storage, XSS, info leaks) to **safety** or **availability** impact — **unless** the exposed data enables a realistic path to safety compromise.
-            -  Example of valid reasoning: "Leaked credentials from cleartext storage could allow an attacker to remotely authenticate to a PLC and modify process logic."
-
-            -  Do **not** overrate XSS, SNMP misconfigs, or banner leaks unless:
-            - The vulnerability enables interaction with **control functions** or **trusted boundaries**
-            - It allows **pivoting** to more critical parts of the ICS network
-            - It targets interfaces that execute or relay operational commands
-
-            -  Always determine **how the vulnerability affects physical operations**:
-            - Does it allow an attacker to stop, alter, or degrade a physical process?
-            - If **not**, clearly state: "This vulnerability does not impact control logic, availability, or safety-critical behavior."
-
-            -  Use caution with **DoS** vulnerabilities:
-            - Escalate only if the affected system is directly tied to **process integrity** (e.g., controller, safety relay, alarm node)
-            - Do not escalate for DoS on historian nodes or monitoring dashboards unless availability loss leads to **process blindness**
-
-            -  Do **not** assume CVSS = OT Risk:
-            - CVSS often inflates severity in isolated ICS environments
-            - Always assess exploitability **in context** of air gaps, segmentation, USB-only access, and real-world exposure
-
-            -  For **isolated systems**:
-            - Acknowledge segmentation, firewalls, physical access controls
-            - Downgrade risk unless:
-                - The exploit could be triggered through USB or physical compromise
-                - The impact is significant *even if isolated* (e.g., logic abuse, setpoint manipulation)
-
-            -  If assigning "High" or "Critical" to an isolated system:
-            - Justify with detail: "Although isolated, malicious USB firmware flashing could reprogram the PLC. This poses a high process integrity risk."
-
-            **BOTTOM LINE:** Only assign high severity when a vulnerability is realistically exploitable **and** causes disruption to **safety, availability, or process control** in OT.
-
-            Always align technical details with **realistic OT consequences**.
-
-            ###  STEP 4: ADD MITRE ATT&CK FOR ICS (If Applicable)
-            - Map tactics/techniques if relevant and helpful to justify risk
-            - E.g., Initial Access → Exploit Public-Facing Application
-            - Mention tactic/technique in reasoning if it strengthens justification
-
-            ---
-
-            ### 5.  FINAL DECISION & OUTPUT
-            If you assign "High" or "Critical" risk, explicitly explain **how the vulnerability affects safety or process control**, not just that it's "severe" or "critical." Avoid vague statements like "it's critical despite isolation."
-            Return a **valid JSON** object with a final risk level and justification for each input.
-
-            IMPORTANT: The input starts with index 1, so your output should match that numbering.
-            
-            #### Format:
-            ```json
-            {{
-            "risk_level1": "Medium",
-            "justification1": "The vulnerability enables DoS via malformed packets, but the asset is isolated and monitored with firewall protections. No known exploits. Risk is moderate.",
-            "risk_level2": "High",
-            "justification2": "The PLC is connected to the control network and the vulnerability allows remote command injection. Impacts process logic. MITRE tactic: Impair Process Control (T855)."
-            }}
-        """
-
-
-
-        user_template = """
-            Please determine the Risk Level for the following sets of OT Cybersecurity parameters based on the instructions defined in the system prompt. If the Hosting is 'isolated', consider all factors specified (CVE Description, Asset Note, Asset classification, Safety Impact, Hosting, Vulnerability Severity) for the final output. Otherwise, evaluate based on the system prompt.
-
-            IMPORTANT: Numbers in the input correspond to item numbers in the output. Your response must be a SINGLE JSON object with numbered keys matching the input numbering. For example:
-            {{
-                "risk_level1": "Medium",
-                "justification1": "First justification...",
-                "risk_level2": "High", 
-                "justification2": "Second justification...",
-                "risk_level3": "Low",
-                "justification3": "Third justification..."
-            }}
-
-            DO NOT return an array or multiple JSON objects. Use numbered suffixes (1, 2, 3, etc.) for each risk_level and justification key that EXACTLY match the input item numbers.
-
-            ## Input Sets Start Here:
-            {text_input}
-            ## Input Sets End Here:
-        """
+        You are an expert **Operational Technology (OT) Cybersecurity Analyst** specializing in Industrial Control Systems (ICS), vulnerability analysis (CVEs), and practical risk assessment within OT environments.
         
-        prompt_template = ChatPromptTemplate.from_messages(
-            [("system", system_prompt), ("user", user_template)]
-        )        
-
-
-        prompt = prompt_template.invoke({"text_input": text_input})
-        response = self.model.invoke(prompt)
+        **Persona Mindset:** Think like a seasoned OT defender who prioritizes **realistic operational impact** (safety, process control, availability) over theoretical vulnerability scores.
         
-        # Initialize dictionaries to store risk levels and justifications
-        risk_levels = {}
-        justifications = {}
+        ## 2. PRIMARY OBJECTIVE
+        
+        Your task is to analyze the provided CVE Description, Asset Classification Note, and Predefined Severity to determine a final Risk Level that accounts for mitigations and isolation status.
+        
+        ## 3. CORE ASSESSMENT RULES (MANDATORY)
+        
+        These rules are ABSOLUTE and must be followed WITHOUT EXCEPTION:
+        
+        * **RULE 1: Network Vulnerabilities + Isolation = REDUCED RISK**
+          * IF vulnerability requires network access for exploitation AND asset is isolated
+          * THEN risk level MUST be REDUCED (typically to LOW)
+          * Justification must explicitly reference the specific CVE ID and explain how the particular isolation method blocks this specific network vulnerability
+          * IMPORTANT: Use DIFFERENT wording for each assessment
+        
+        * **RULE 2: Local/Physical Vulnerabilities NOT Mitigated by Isolation**
+          * IF vulnerability requires local/physical access for exploitation
+          * THEN isolation has NO EFFECT on risk level
+          * Justification must explicitly reference the specific CVE ID and explain why the particular isolation method cannot protect against this specific local vulnerability
+          * IMPORTANT: Use DIFFERENT wording for each assessment
+        
+        * **RULE 3: User Interaction Vulnerabilities Partially Mitigated by Isolation**
+          * IF vulnerability requires user interaction AND asset is isolated
+          * THEN assess if user interaction is restricted by isolation
+          * IF user interaction is restricted, reduce risk by one level
+          * IF user interaction remains possible, isolation has NO EFFECT
+          * IMPORTANT: Use DIFFERENT wording for each assessment
+        
+        * **RULE 4: Minimum Risk Floors Based on Asset Criticality**
+          * Critical assets cannot have risk below Medium for any local vulnerability
+          * High classification assets cannot have risk below Medium for high-severity local vulnerabilities
+          * Safety-critical functions must maintain at least Medium risk regardless of isolation
+        
+        ## 4. VULNERABILITY CLASSIFICATION (MANDATORY FIRST STEP)
+        
+        You MUST classify each vulnerability into EXACTLY ONE of these categories:
+        
+        * **Network-based:** Requires network connectivity for exploitation
+          * Examples: Remote code execution, network protocol vulnerabilities, remote DoS attacks
+          * Identifiers in CVE Description: Terms like "remote", "network", "adjacent", "unauthenticated access"
+        
+        * **Local/Physical:** Requires local access to exploit
+          * Examples: Local privilege escalation, physical tampering, USB-based attacks
+          * Identifiers in CVE Description: Terms like "local", "physical", "console", "USB", "insider"
+        
+        * **User Interaction:** Requires specific user actions
+          * Examples: Clicking links, opening files, entering credentials
+          * Identifiers in CVE Description: Terms like "user interaction", "social engineering", "phishing"
+        
+        ## 5. STRUCTURED ANALYSIS WORKFLOW (FOLLOW EXACTLY)
+        
+        **STEP 1: Analyze the CVE Description**
+        * Determine the vulnerability type: Network-based, Local/Physical, or User Interaction
+        * Identify the specific vulnerability mechanism (e.g., buffer overflow, SQL injection, etc.)
+        * Identify the potential impact and severity
+        * Extract the CVE ID for reference in your justification
+        
+        **STEP 2: Analyze the Asset Classification Note**
+        * Check for mentions of isolation status and the specific isolation method
+        * Identify any specific mitigations mentioned
+        * Note any special circumstances about the asset's environment
+        * Extract specific details for reference in your justification
+        
+        **STEP 3: Consider the Predefined Severity**
+        * Use this as your starting point for risk assessment
+        * This represents the baseline risk before considering isolation and specific mitigations
+        
+        **STEP 4: Apply the Appropriate Rules**
+        * IF the vulnerability is Network-based AND isolation is mentioned in the Asset Note:
+          * Apply RULE 1: Reduce the risk level
+        * IF the vulnerability is Local/Physical AND isolation is mentioned:
+          * Apply RULE 2: Maintain risk level despite isolation
+        * IF the vulnerability requires User Interaction AND isolation is mentioned:
+          * Apply RULE 3: Assess if isolation restricts user interaction
+        * For all assessments, consider RULE 4 for minimum risk floors
+        
+        **STEP 5: Determine Final Risk Level**
+        * Based on the applied rules, determine the final risk level: Critical, High, Medium, or Low
+        * Ensure consistency with the rules above
+        **STEP 6: Formulate UNIQUE Justification**
+        * CRITICAL: Each justification MUST be unique and specific to the vulnerability being analyzed in the **current input set**.
+        * **MANDATORY: DO NOT, under any circumstances, include any CVE ID (e.g., CVE-YYYY-NNNN) in the justification text. The justification must focus solely on the vulnerability mechanism, asset details, mitigations, and risk reasoning.**
+        * MUST reference the specific vulnerability type/mechanism from the CVE Description **in the current input set**.
+        * MUST reference the specific isolation method or mitigations from the Asset Note **in the current input set**.
+        * MUST explain how these specific factors affected the final risk level for the **current input set**.
+        * MUST use different wording and structure for each assessment.
+        * AVOID generic statements that could apply to any vulnerability.
+        * AVOID using the same justification template for multiple assessments.
+        * AVOID repetitive phrases across different assessments.
+        ## 6. EXAMPLE ASSESSMENTS (FOLLOW THESE PATTERNS FOR UNIQUENESS)
+        
+        **IMPORTANT NOTE:** The following example justifications deliberately omit the CVE ID, strictly following the mandatory rule in STEP 6. Your generated justifications MUST also omit the CVE ID.
+        
+        ### EXAMPLE 1: Network Vulnerability on Isolated System
+        **Input:**
+        - CVE Description: CVE-2020-8476 - Central Licensing Server component used in ABB products
+        - Asset Classification Note: Profinet protocol (air-gapped OT network; no external exposure)
+        - Predefined Severity: High
+        
+        **Correct Analysis:**
+        1. Vulnerability Type: Network-based (requires network access)
+        2. Asset Note indicates isolation: "air-gapped OT network; no external exposure"
+        3. Rule Application: RULE 1 APPLIES (Network vulnerability + Isolation = REDUCED RISK)
+        4. Final Risk Level: LOW (reduced from High)
+        5. Justification: "The vulnerability affecting the ABB Central Licensing Server requires network access to exploit, but this specific asset is protected by an air-gapped OT network with no external exposure. This isolation method effectively blocks the attack vector, reducing the risk to Low despite the vulnerability's high severity."
+        
+        ### EXAMPLE 2: Local Vulnerability on Isolated System
+        **Input:**
+        - CVE Description: CVE-2019-6833 - Improper Check for Unusual or Exceptional Conditions vulnerability exists in Magelis HMI
+        - Asset Classification Note: Default credentials (admin/admin — air-gapped network)
+        - Predefined Severity: High
+        
+        **Correct Analysis:**
+        1. Vulnerability Type: Local/Physical (requires local access)
+        2. Asset Note indicates isolation but also a local vulnerability (default credentials)
+        3. Rule Application: RULE 2 APPLIES (Local vulnerability not mitigated by isolation)
+        4. Final Risk Level: HIGH (unchanged)
+        5. Justification: "The vulnerability in the Magelis HMI involves improper condition checking that, combined with default credentials (admin/admin), creates a significant local security risk. While the asset is on an air-gapped network, this isolation doesn't protect against local authentication bypass. The risk remains High due to this viable local exploit path."
+        
+        ### EXAMPLE 3: Network Vulnerability with Specific Mitigation
+        **Input:**
+        - CVE Description: CVE-2022-25167 - Buffer overflow in web server component allows remote code execution
+        - Asset Classification Note: Web server disabled, only console access enabled
+        - Predefined Severity: Critical
+        
+        **Correct Analysis:**
+        1. Vulnerability Type: Network-based (remote code execution via web server)
+        2. Asset Note indicates specific mitigation: "Web server disabled"
+        3. Rule Application: RULE 3 APPLIES (Specific mitigation reduces risk)
+        4. Final Risk Level: LOW (reduced from Critical)
+        5. Justification: "The buffer overflow in the web server component allows remote code execution. However, this specific asset has the web server component completely disabled, with only console access enabled. This targeted mitigation directly addresses the vulnerability's attack vector, reducing the risk from Critical to Low."
+        
+        ## 7. OUTPUT REQUIREMENTS
+        
+        You MUST provide your output in this exact JSON format:
+        
+        ```json
+        {{
+          "risk_level": "Choose: Critical | High | Medium | Low",
+          "justification": "Unique and specific technical reasoning that references the specific vulnerability mechanism, the specific isolation method or mitigations, and explains why the risk level was assigned. DO NOT include the CVE ID. Generic explanations are not acceptable."
+        }}
 
-        # Parse response keys and values
-        for key, value in response.items():
-            if key.startswith('risk_level'):
-                try:
-                    # Extract index number from key (e.g., 'risk_level1' -> 1)
-                    idx_str = key.replace('risk_level', '')
-                    idx = int(idx_str) - 1  # Convert to 0-based index for our mapping
-                    if 0 <= idx < len(index_map):
-                        # Map to original DataFrame index
-                        orig_idx = index_map[idx]
-                        risk_levels[orig_idx] = value
-                except (ValueError, KeyError) as e:
-                    # Handle any parsing errors
-                    print(f"Error parsing index from {key}: {e}")
-                    continue
-                    
-            elif key.startswith('justification'):
-                try:
-                    # Extract index number from key (e.g., 'justification1' -> 1)
-                    idx_str = key.replace('justification', '')
-                    idx = int(idx_str) - 1  # Convert to 0-based index for our mapping
-                    if 0 <= idx < len(index_map):
-                        # Map to original DataFrame index
-                        orig_idx = index_map[idx]
-                        justifications[orig_idx] = value
-                except (ValueError, KeyError) as e:
-                    # Handle any parsing errors
-                    print(f"Error parsing index from {key}: {e}")
-                    continue
+            """
 
-        # Add to DataFrame with proper alignment
+            user_template = f"""Please determine the Risk Level for the following SINGLE OT Cybersecurity vulnerability assessment:\n\n{single_input}\n\nProvide your assessment in JSON format with risk_level and justification fields only."""
+
+            prompt_template = ChatPromptTemplate.from_messages(
+                [("system", system_prompt), ("user", user_template)]
+            )
+
+            try:
+                prompt = prompt_template.invoke({})
+                response = self.model.invoke(prompt)
+
+                print(f"Processing vulnerability {index}...")
+
+                # Store results using original index as key
+                if "risk_level" in response and "justification" in response:
+                    risk_levels[index] = response["risk_level"]
+                    justifications[index] = response["justification"]
+                else:
+                    print(f"Warning: Missing fields in response for vulnerability {index}")
+                    risk_levels[index] = "Error"
+                    justifications[index] = "Error: Invalid response format"
+
+            except Exception as e:
+                print(f"Error processing vulnerability {index}: {e}")
+                risk_levels[index] = "Error"
+                justifications[index] = f"Error: {str(e)}"
+
+        # Add results to DataFrame
         merge_df["risk_level"] = merge_df.index.map(lambda x: risk_levels.get(x, "Unknown"))
         merge_df["llm_justification"] = merge_df.index.map(lambda x: justifications.get(x, "No justification provided"))
         
